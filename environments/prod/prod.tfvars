@@ -1,0 +1,11 @@
+region               = "us-east-1"
+app_name             = "my-eb-app"
+env_name             = "my-eb-env-prod"
+iam_instance_profile = "prod-ec2-role-name"
+service_role         = "arn:aws:iam::911287867452:role/aws-elasticbeanstalk-service-role"
+vpc_id               = "vpc-pppppppp"
+subnets              = ["subnet-p1p1p1p1", "subnet-p2p2p2p2", "subnet-p3p3p3p3"]
+s3_bucket            = "tss-ebstalk-prod-backend"
+instance_type        = "t3.medium"
+ssl_certificate_arn = "arn:aws:acm:us-east-1:333333333333:certificate/pppppppp-pppp-pppp-pppp-pppppppppppp"
+notification_email   = "rl.muthukumar@gmail.com"
