@@ -14,6 +14,18 @@ resource "aws_elastic_beanstalk_application" "eb_app" {
   description = "Elastic Beanstalk Application for ${var.app_name}"
 }
 
+# --- Application Version Lifecycle Policy ---
+resource "aws_elastic_beanstalk_application_version_lifecycle" "eb_lifecycle" {
+  application = aws_elastic_beanstalk_application.eb_app.name
+  service_role = var.service_role
+
+  max_count_rule {
+    enabled               = true
+    max_count            = 100 # Adjust this to the number of versions to keep
+    delete_source_from_s3 = true
+  }
+}
+
 # --- Elastic Beanstalk Environment ---
 resource "aws_elastic_beanstalk_environment" "eb_env" {
   name                = var.env_name
@@ -129,7 +141,10 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   ]
 
   lifecycle {
-    ignore_changes = [tags, tags_all]
+    ignore_changes = [
+      tags,
+      tags_all
+    ]
   }
 }
 
