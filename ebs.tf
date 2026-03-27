@@ -23,6 +23,12 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   }
 
   setting {
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "SecurityGroups"
+    value     = "sg-08b493d4866c66c58" # Existing Instance Security Group
+  }
+
+  setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "ServiceRole"
     value     = var.service_role
@@ -58,6 +64,12 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "LoadBalancerType"
     value     = "application"
+  }
+
+  setting {
+    namespace = "aws:elbv2:loadbalancer"
+    name      = "SecurityGroups"
+    value     = "sg-030d421445d4ae6bc" # Existing ALB Security Group
   }
 
   # --- APP SETTINGS: Environment Variable ---
