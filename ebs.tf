@@ -2,6 +2,12 @@ provider "aws" {
   region = var.region
 }
 
+# --- DATA: Get Default VPC Security Group ---
+data "aws_security_group" "default_vpc_sg" {
+  vpc_id = var.vpc_id
+  name   = "default"
+}
+
 # --- Elastic Beanstalk Application ---
 resource "aws_elastic_beanstalk_application" "eb_app" {
   name        = var.app_name
@@ -26,7 +32,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "SecurityGroups"
-    value     = var.instance_security_group_id
+    value     = data.aws_security_group.default_vpc_sg.id
   }
 
   setting {
