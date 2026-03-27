@@ -14,6 +14,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   application         = aws_elastic_beanstalk_application.eb_app.name
   solution_stack_name = var.solution_stack_name
   tier                = "WebServer"
+  cname_prefix        = var.env_name # This is the "Domain" field in the console
 
   # --- MANDATORY: IAM ---
   setting {
@@ -75,8 +76,27 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   # --- APP SETTINGS: Environment Variable ---
   setting {
     namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "ASPNETCORE_ENVIRONMENT"
-    value     = "Development"
+    name      = "JAVA_OPTS"
+    value     = "-Xmx512m"
+  }
+
+  # --- PROCESS SETTINGS: Port and Health Check ---
+  setting {
+    namespace = "aws:elasticbeanstalk:environment:process:default"
+    name      = "Port"
+    value     = "5000" # Common default for Java/Corretto on EB
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:environment:process:default"
+    name      = "Protocol"
+    value     = "HTTP"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:environment:process:default"
+    name      = "HealthCheckPath"
+    value     = "/"
   }
 
   depends_on = [
