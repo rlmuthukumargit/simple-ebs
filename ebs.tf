@@ -82,7 +82,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:elbv2:loadbalancer"
     name      = "SecurityGroups"
-    value     = aws_security_group.alb_sg.id
+    value     = data.aws_security_group.alb_sg.id
   }
 
   setting {
@@ -131,7 +131,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "SecurityGroups"
-    value     = aws_security_group.instance_sg.id
+    value     = data.aws_security_group.instance_sg.id
   }
 
   # --- CloudWatch Logs Integration ---

@@ -68,3 +68,13 @@ variable "solution_stack_name" {
   type        = string
   default     = "64bit Amazon Linux 2023 v4.10.0 running Corretto 17"
 }
+
+variable "alb_security_group_id" {
+  description = "Existing ALB Security Group ID"
+  type        = string
+}
+
+variable "instance_security_group_id" {
+  description = "Existing EC2 Instance Security Group ID"
+  type        = string
+}

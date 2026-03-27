@@ -1,12 +1,7 @@
-# --- Monitoring ---
-resource "aws_sns_topic" "alerts" {
-  name = "${var.app_name}-${var.env_name}-alerts"
-}
+# --- Monitoring (Use Existing SNS Topic) ---
 
-resource "aws_sns_topic_subscription" "email" {
-  topic_arn = aws_sns_topic.alerts.arn
-  protocol  = "email"
-  endpoint  = var.notification_email
+data "aws_sns_topic" "alerts" {
+  name = "${var.app_name}-${var.env_name}-alerts"
 }
 
 # --- Elastic Beanstalk Alarms ---
@@ -21,7 +16,7 @@ resource "aws_cloudwatch_metric_alarm" "eb_health" {
   statistic           = "Maximum"
   threshold           = "0" # 0 is OK/Green. Higher values mean Warning/Degraded/Severe.
   alarm_description   = "This metric monitors EB environment health (Non-Green status)"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
+  alarm_actions       = [data.aws_sns_topic.alerts.arn]
 
   dimensions = {
     EnvironmentName = aws_elastic_beanstalk_environment.eb_env.name
@@ -38,7 +33,7 @@ resource "aws_cloudwatch_metric_alarm" "eb_4xx" {
   statistic           = "Sum"
   threshold           = "50"
   alarm_description   = "This metric monitors high 4XX errors on the EB environment"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
+  alarm_actions       = [data.aws_sns_topic.alerts.arn]
 
   dimensions = {
     EnvironmentName = aws_elastic_beanstalk_environment.eb_env.name
@@ -55,7 +50,7 @@ resource "aws_cloudwatch_metric_alarm" "eb_5xx" {
   statistic           = "Sum"
   threshold           = "10"
   alarm_description   = "This metric monitors high 5XX errors on the EB environment"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
+  alarm_actions       = [data.aws_sns_topic.alerts.arn]
 
   dimensions = {
     EnvironmentName = aws_elastic_beanstalk_environment.eb_env.name
@@ -64,5 +59,5 @@ resource "aws_cloudwatch_metric_alarm" "eb_5xx" {
 
 output "sns_topic_arn" {
   description = "The ARN of the SNS topic for alerts"
-  value       = aws_sns_topic.alerts.arn
+  value       = data.aws_sns_topic.alerts.arn
 }
