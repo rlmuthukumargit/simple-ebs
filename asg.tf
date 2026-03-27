@@ -12,39 +12,64 @@ locals {
       value     = "1"
     },
     {
+      namespace = "aws:autoscaling:asg"
+      name      = "CustomAvailabilityZones"
+      value     = "Any" # Match image "Any"
+    },
+    {
+      namespace = "aws:autoscaling:asg"
+      name      = "Availability Zones" # For older stacks or specific naming
+      value     = "Any"
+    },
+    {
+      namespace = "aws:autoscaling:asg"
+      name      = "ScalingCooldown"
+      value     = "360" # Match image 360
+    },
+    {
       namespace = "aws:autoscaling:trigger"
       name      = "MeasureName"
-      value     = "CPUUtilization"
+      value     = "NetworkOut" # Match image NetworkOut
     },
     {
       namespace = "aws:autoscaling:trigger"
       name      = "Unit"
-      value     = "Percent"
+      value     = "Bytes" # Match image Bytes
     },
     {
       namespace = "aws:autoscaling:trigger"
       name      = "UpperThreshold"
-      value     = "80"
+      value     = "6000000" # Match image 6000000
     },
     {
       namespace = "aws:autoscaling:trigger"
       name      = "LowerThreshold"
-      value     = "20"
+      value     = "2000000" # Match image 2000000
     },
     {
       namespace = "aws:autoscaling:trigger"
       name      = "Statistic"
-      value     = "Average"
+      value     = "Average" # Match image Average
     },
     {
       namespace = "aws:autoscaling:trigger"
       name      = "Period"
-      value     = "5"
+      value     = "5" # Match image 5
     },
     {
       namespace = "aws:autoscaling:trigger"
       name      = "EvaluationPeriods"
-      value     = "2"
+      value     = "5" # Match image breach duration 5
+    },
+    {
+      namespace = "aws:autoscaling:trigger"
+      name      = "UpperBreachScaleIncrement"
+      value     = "1" # Match image scale up increment 1
+    },
+    {
+      namespace = "aws:autoscaling:trigger"
+      name      = "LowerBreachScaleIncrement"
+      value     = "-1" # Match image scale down increment -1
     }
   ]
 }
