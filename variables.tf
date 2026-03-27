@@ -54,6 +54,7 @@ variable "instance_type" {
 variable "notification_email" {
   description = "Email address for notifications"
   type        = string
+  default     = ""
 }
 
 variable "tier" {
