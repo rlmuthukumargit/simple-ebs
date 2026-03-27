@@ -40,28 +40,6 @@ variable "instance_type" {
   default     = "t3a.medium,t3a.large"
 }
 
-variable "tier" {
-  description = "Elastic Beanstalk Environment Tier"
-  type        = string
-  default     = "WebServer"
-}
-
-variable "solution_stack_name" {
-  description = "Elastic Beanstalk Solution Stack Name"
-  type        = string
-  default     = "64bit Amazon Linux 2023 v4.10.0 running Corretto 25"
-}
-
-variable "alb_security_group_id" {
-  description = "Existing ALB Security Group ID"
-  type        = string
-}
-
-variable "instance_security_group_id" {
-  description = "Existing EC2 Instance Security Group ID"
-  type        = string
-}
-
 variable "ssl_certificate_arn" {
   description = "Amazon Resource Name (ARN) of the SSL certificate"
   type        = string

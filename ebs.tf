@@ -12,16 +12,10 @@ data "aws_security_group" "default_vpc_sg" {
 resource "aws_elastic_beanstalk_application" "eb_app" {
   name        = var.app_name
   description = "Elastic Beanstalk Application for ${var.app_name}"
-}
 
-# --- Application Version Lifecycle Policy ---
-resource "aws_elastic_beanstalk_application_version_lifecycle" "eb_lifecycle" {
-  application = aws_elastic_beanstalk_application.eb_app.name
-  service_role = var.service_role
-
-  max_count_rule {
-    enabled               = true
-    max_count            = 100 # Adjust this to the number of versions to keep
+  appversion_lifecycle {
+    service_role          = var.service_role
+    max_count             = 100
     delete_source_from_s3 = true
   }
 }
