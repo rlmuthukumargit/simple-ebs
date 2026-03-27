@@ -6,5 +6,4 @@ service_role         = "arn:aws:iam::911287867452:role/aws-elasticbeanstalk-serv
 vpc_id               = "vpc-0975e41529fdd220e"
 subnets              = ["subnet-0db123d54c271e391", "subnet-07f28a28b8830044b", "subnet-0b17ab8abf3a8b378"]
 instance_type        = "t3a.medium,t3a.large"
-alb_security_group_id      = "sg-030d421445d4ae6bc"
 ssl_certificate_arn        = "arn:aws:acm:us-east-1:xxxxxxxx:certificate/xxxx-xxxx-xxxx"

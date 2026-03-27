@@ -73,12 +73,6 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = "application"
   }
 
-  setting {
-    namespace = "aws:elbv2:loadbalancer"
-    name      = "SecurityGroups"
-    value     = var.alb_security_group_id
-  }
-
   # --- HTTPS Listener (Port 443) ---
   setting {
     namespace = "aws:elbv2:listener:443"
