@@ -1,0 +1,4 @@
+bucket  = "elasticbukcet1"
+key     = "tssdev01/terraform.tfstate"
+region  = "us-east-1"
+encrypt = true
