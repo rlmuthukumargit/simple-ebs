@@ -80,6 +80,12 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = "-Xmx512m"
   }
 
+  setting {
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "InstanceType"
+    value     = var.instance_type
+  }
+
   # --- PROCESS SETTINGS: Port and Health Check ---
   setting {
     namespace = "aws:elasticbeanstalk:environment:process:default"
