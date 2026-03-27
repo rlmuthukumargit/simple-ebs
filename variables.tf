@@ -49,5 +49,5 @@ variable "tier" {
 variable "solution_stack_name" {
   description = "Elastic Beanstalk Solution Stack Name"
   type        = string
-  default     = "64bit Amazon Linux 2023 v4.10.0 running Corretto 17"
+  default     = "64bit Amazon Linux 2023 v4.10.0 running Corretto 25"
 }
