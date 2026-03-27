@@ -72,13 +72,6 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     name      = "LoadBalancerType"
     value     = "application"
   }
-
-  setting {
-    namespace = "aws:elbv2:loadbalancer"
-    name      = "SharedLoadBalancer"
-    value     = "false"
-  }
-
   setting {
     namespace = "aws:elasticbeanstalk:environment:process:default"
     name      = "HealthCheckPath"
