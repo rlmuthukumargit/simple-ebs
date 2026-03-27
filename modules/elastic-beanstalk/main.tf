@@ -1,11 +1,3 @@
-terraform {
-  backend "s3" {}
-}
-
-provider "aws" {
-  region = var.region
-}
-
 # --- DATA: Get Default VPC Security Group ---
 data "aws_security_group" "default_vpc_sg" {
   vpc_id = var.vpc_id
@@ -29,8 +21,8 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   name                = var.env_name
   application         = aws_elastic_beanstalk_application.eb_app.name
   solution_stack_name = var.solution_stack_name
-  tier                = "WebServer"
-  cname_prefix        = var.env_name # This is the "Domain" field in the console
+  tier                = var.tier
+  cname_prefix        = var.env_name
 
   # --- MANDATORY: IAM ---
   setting {
@@ -119,7 +111,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:elasticbeanstalk:environment:process:default"
     name      = "Port"
-    value     = "5000" # Common default for Java/Corretto on EB
+    value     = "5000"
   }
 
   setting {
@@ -144,10 +136,4 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
       tags_all
     ]
   }
-}
-
-# --- Outputs ---
-output "eb_env_url" {
-  description = "Elastic Beanstalk Environment URL"
-  value       = aws_elastic_beanstalk_environment.eb_env.cname
 }
