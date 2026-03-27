@@ -2,34 +2,20 @@ provider "aws" {
   region = var.region
 }
 
-# --- Application Artifact ---
-resource "aws_s3_object" "app_artifact" {
-  bucket = var.s3_bucket
-  key    = "deployments/snapshot.jar"
-  source = "snapshot.jar"
-}
-
-resource "aws_elastic_beanstalk_application_version" "latest" {
-  name        = "${var.app_name}-${var.env_name}-v1"
-  application = aws_elastic_beanstalk_application.eb_app.name
-  bucket      = var.s3_bucket
-  key         = aws_s3_object.app_artifact.key
-}
-
-# --- Elastic Beanstalk ---
+# --- Elastic Beanstalk Application ---
 resource "aws_elastic_beanstalk_application" "eb_app" {
   name        = var.app_name
   description = "Elastic Beanstalk Application for ${var.app_name}"
 }
 
+# --- Elastic Beanstalk Environment ---
 resource "aws_elastic_beanstalk_environment" "eb_env" {
   name                = var.env_name
   application         = aws_elastic_beanstalk_application.eb_app.name
   solution_stack_name = var.solution_stack_name
   tier                = var.tier
-  version_label       = aws_elastic_beanstalk_application_version.latest.name
 
-  # --- General Settings ---
+  # --- IAM ---
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "IamInstanceProfile"
@@ -42,6 +28,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = var.service_role
   }
 
+  # --- VPC / Network ---
   setting {
     namespace = "aws:ec2:vpc"
     name      = "VPCId"
@@ -56,14 +43,21 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
 
   setting {
     namespace = "aws:ec2:vpc"
+    name      = "ELBSubnets"
+    value     = join(",", var.subnets)
+  }
+
+  setting {
+    namespace = "aws:ec2:vpc"
     name      = "ELBScheme"
     value     = "internal"
   }
 
+  # --- Instance Settings ---
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "InstanceType"
-    value     = "t3a.medium,t3a.large" # Updated from var.instance_type to match image
+    value     = var.instance_type
   }
 
   setting {
@@ -72,7 +66,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = "true"
   }
 
-  # --- Internal Application Load Balancer Settings ---
+  # --- Load Balancer ---
   setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "LoadBalancerType"
@@ -81,8 +75,8 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
 
   setting {
     namespace = "aws:elbv2:loadbalancer"
-    name      = "SecurityGroups"
-    value     = data.aws_security_group.alb_sg.id
+    name      = "SharedLoadBalancer"
+    value     = "false"
   }
 
   setting {
@@ -119,22 +113,47 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:autoscaling:updatepolicy:rollingupdate"
     name      = "MaxBatchSize"
-    value     = "30" # Match image batch size
+    value     = "30"
   }
 
   setting {
     namespace = "aws:autoscaling:updatepolicy:rollingupdate"
     name      = "MaxBatchSizeUnit"
-    value     = "Percentage" # Match image batch size type
+    value     = "Percentage"
+  }
+
+  # --- Deployment ---
+  setting {
+    namespace = "aws:elasticbeanstalk:command"
+    name      = "DeploymentPolicy"
+    value     = "Rolling"
   }
 
   setting {
-    namespace = "aws:autoscaling:launchconfiguration"
-    name      = "SecurityGroups"
-    value     = data.aws_security_group.instance_sg.id
+    namespace = "aws:elasticbeanstalk:command"
+    name      = "InstanceReplacement"
+    value     = "false"
   }
 
-  # --- CloudWatch Logs Integration ---
+  setting {
+    namespace = "aws:elasticbeanstalk:command"
+    name      = "Timeout"
+    value     = "600"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:command"
+    name      = "IgnoreHealthCheck"
+    value     = "false"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:command"
+    name      = "HealthCheckSuccessThreshold"
+    value     = "Ok"
+  }
+
+  # --- CloudWatch Logs ---
   setting {
     namespace = "aws:elasticbeanstalk:cloudwatch:logs"
     name      = "StreamLogs"
@@ -151,67 +170,6 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     namespace = "aws:elasticbeanstalk:cloudwatch:logs"
     name      = "RetentionInDays"
     value     = "7"
-  }
-
-  setting {
-    namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "S3_BUCKET"
-    value     = var.s3_bucket
-  }
-
-  # --- S3 Log Storage ---
-  setting {
-    namespace = "aws:elasticbeanstalk:hostmanager"
-    name      = "LogPublicationControl"
-    value     = "true"
-  }
-
-  setting {
-    namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "LOG_PREFIX"
-    value     = "logs/eb/${var.env_name}"
-  }
-
-  # --- Environment Properties ---
-  setting {
-    namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "ASPNETCORE_ENVIRONMENT"
-    value     = "Development"
-  }
-
-  setting {
-    namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "D365_BASE_URL"
-    value     = "https://tss-d365-d2.crm.dynamics.com"
-  }
-
-  setting {
-    namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "D365_CLIENT_ID"
-    value     = "aa78a446-0627-4353-8419-d66bcbfdf4e0"
-  }
-
-  setting {
-    namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "D365_CLIENT_SECRET"
-    value     = "arn:aws:secretsmanager:us-east-2:510931056574:secret:D365_CLIENT_SECRET_D2-WhUnC"
-  }
-
-  # --- Deployment Instance Replacement ---
-  setting {
-    namespace = "aws:elasticbeanstalk:command"
-    name      = "InstanceReplacement"
-    value     = "false"
-  }
-
-  # --- Dynamic Auto Scaling Group Settings (from asg.tf) ---
-  dynamic "setting" {
-    for_each = local.asg_settings
-    content {
-      namespace = setting.value.namespace
-      name      = setting.value.name
-      value     = setting.value.value
-    }
   }
 
   # --- Managed Actions ---
@@ -240,9 +198,64 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = "nginx"
   }
 
+  # --- Store Logs ---
+  setting {
+    namespace = "aws:elasticbeanstalk:hostmanager"
+    name      = "LogPublicationControl"
+    value     = "false"
+  }
+
+  # --- X-Ray ---
+  setting {
+    namespace = "aws:elasticbeanstalk:xray"
+    name      = "XRayEnabled"
+    value     = "false"
+  }
+
+  # --- Rotate Logs ---
+  setting {
+    namespace = "aws:elasticbeanstalk:cloudwatch:logs"
+    name      = "RotateLogs"
+    value     = "true"
+  }
+
+  # --- Environment Properties ---
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "ASPNETCORE_ENVIRONMENT"
+    value     = "Development"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "D365_BASE_URL"
+    value     = "https://tss-d365-d2.crm.dynamics.com"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "D365_CLIENT_ID"
+    value     = "aa78a446-0627-4353-8419-d66bcbfdf4e0"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "D365_CLIENT_SECRET"
+    value     = "arn:aws:secretsmanager:us-east-2:510931056574:secret:D365_CLIENT_SECRET_D2-WhUnC"
+  }
+
+  # --- Dynamic Auto Scaling Group Settings ---
+  dynamic "setting" {
+    for_each = local.asg_settings
+    content {
+      namespace = setting.value.namespace
+      name      = setting.value.name
+      value     = setting.value.value
+    }
+  }
+
   depends_on = [
-    aws_elastic_beanstalk_application.eb_app,
-    aws_s3_object.app_artifact
+    aws_elastic_beanstalk_application.eb_app
   ]
 
   lifecycle {
@@ -250,6 +263,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   }
 }
 
+# --- Outputs ---
 output "eb_app_name" {
   description = "Elastic Beanstalk Application Name"
   value       = aws_elastic_beanstalk_application.eb_app.name

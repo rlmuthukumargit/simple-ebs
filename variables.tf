@@ -34,27 +34,10 @@ variable "subnets" {
   type        = list(string)
 }
 
-variable "ssl_certificate_arn" {
-  description = "ARN of the SSL certificate"
-  type        = string
-  default     = ""
-}
-
-variable "s3_bucket" {
-  description = "Existing S3 bucket name"
-  type        = string
-}
-
 variable "instance_type" {
-  description = "EC2 instance type"
+  description = "EC2 instance type(s)"
   type        = string
-  default     = "t3.micro"
-}
-
-variable "notification_email" {
-  description = "Email address for notifications"
-  type        = string
-  default     = ""
+  default     = "t3a.medium,t3a.large"
 }
 
 variable "tier" {
@@ -67,14 +50,4 @@ variable "solution_stack_name" {
   description = "Elastic Beanstalk Solution Stack Name"
   type        = string
   default     = "64bit Amazon Linux 2023 v4.10.0 running Corretto 17"
-}
-
-variable "alb_security_group_id" {
-  description = "Existing ALB Security Group ID"
-  type        = string
-}
-
-variable "instance_security_group_id" {
-  description = "Existing EC2 Instance Security Group ID"
-  type        = string
 }
