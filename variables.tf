@@ -61,3 +61,9 @@ variable "instance_security_group_id" {
   description = "Existing EC2 Instance Security Group ID"
   type        = string
 }
+
+variable "ssl_certificate_arn" {
+  description = "Amazon Resource Name (ARN) of the SSL certificate"
+  type        = string
+  default     = ""
+}

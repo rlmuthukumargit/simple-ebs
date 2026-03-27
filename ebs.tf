@@ -73,6 +73,19 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = var.alb_security_group_id
   }
 
+  # --- HTTPS Listener (Port 443) ---
+  setting {
+    namespace = "aws:elbv2:listener:443"
+    name      = "Protocol"
+    value     = "HTTPS"
+  }
+
+  setting {
+    namespace = "aws:elbv2:listener:443"
+    name      = "SSLCertificateArns"
+    value     = var.ssl_certificate_arn
+  }
+
   # --- APP SETTINGS: Environment Variable ---
   setting {
     namespace = "aws:elasticbeanstalk:application:environment"
