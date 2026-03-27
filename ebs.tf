@@ -26,7 +26,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "SecurityGroups"
-    value     = "sg-08b493d4866c66c58" # Existing Instance Security Group
+    value     = var.instance_security_group_id
   }
 
   setting {
@@ -70,7 +70,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:elbv2:loadbalancer"
     name      = "SecurityGroups"
-    value     = "sg-030d421445d4ae6bc" # Existing ALB Security Group
+    value     = var.alb_security_group_id
   }
 
   # --- APP SETTINGS: Environment Variable ---
