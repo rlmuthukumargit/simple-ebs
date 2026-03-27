@@ -86,6 +86,12 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = var.ssl_certificate_arn
   }
 
+  setting {
+    namespace = "aws:elbv2:listener:443"
+    name      = "SSLPolicy"
+    value     = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  }
+
   # --- APP SETTINGS: Environment Variable ---
   setting {
     namespace = "aws:elasticbeanstalk:application:environment"
