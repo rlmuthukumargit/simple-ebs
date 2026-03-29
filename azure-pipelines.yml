@@ -1,0 +1,177 @@
+trigger: none
+
+pool:
+  name: GenericPoolLinux-ss
+
+parameters:
+  - name: AWS_SERVICE_CONNECTION
+    type: string
+    default: 'ws-038-testing'
+  - name: AWS_ROLE_NAME
+    type: string
+    default: 'WS-038U-role_AUTOMATION'
+  - name: AWS_REGION
+    type: string
+    default: 'us-east-1'
+
+stages:
+  - stage: Build_Spring_Boot
+    displayName: 'Build'
+    jobs:
+      - job: Build
+        displayName: 'Maven Build'
+        pool:
+          name: GenericPoolLinux-ss
+        steps:
+          - task: Maven@3
+            displayName: 'Build JAR'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'clean package'
+              publishJUnitResults: true
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.25'
+              mavenVersionOption: 'Default'
+              mavenAuthenticateFeed: false
+              effectivePomSkip: false
+              sonarQubeRunAnalysis: false
+
+          - task: CopyFiles@2
+            displayName: 'Copy JAR for Artifact'
+            inputs:
+              SourceFolder: '$(system.defaultworkingdirectory)/target'
+              Contents: '*.jar'
+              TargetFolder: '$(build.artifactstagingdirectory)'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Artifact'
+            inputs:
+              PathtoPublish: '$(build.artifactstagingdirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+
+  - stage: Terraform_Infrastructure
+    displayName: 'Infrastructure'
+    dependsOn: Build_Spring_Boot
+    jobs:
+      - job: Terraform_Plan
+        displayName: 'Terraform Plan'
+        pool:
+          name: GenericPoolLinux-ss
+        steps:
+          - checkout: self
+
+          - task: JasonBJohnson.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest'
+
+          - bash: |
+              if ! aws --version ; then
+                curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                unzip -qq awscliv2.zip
+                sudo ./aws/install --update
+              fi
+            displayName: 'Install AWS CLI'
+
+          - task: BPAES.bp-aws.bp-aws-auth.awsTokenBroker@1
+            displayName: 'Login to AWS'
+            retryCountOnTaskFailure: 5
+            inputs:
+              serviceConnection: ${{ parameters.AWS_SERVICE_CONNECTION }}
+              roleName: ${{ parameters.AWS_ROLE_NAME }}
+              region: ${{ parameters.AWS_REGION }}
+
+          - bash: |
+              set -e
+              terraform init -backend-config="environments/dev/dev.tfvars"
+              terraform plan -var-file="environments/dev/dev.tfvars" -out=$(Build.ArtifactStagingDirectory)/tfplan
+            displayName: 'Terraform Init & Plan'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Terraform Plan'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/tfplan'
+              ArtifactName: 'terraform-plan'
+              publishLocation: 'Container'
+
+      - job: Terraform_Apply
+        displayName: 'Terraform Apply'
+        dependsOn: Terraform_Plan
+        pool:
+          name: GenericPoolLinux-ss
+        steps:
+          - checkout: self
+
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Terraform Plan'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'terraform-plan'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - task: JasonBJohnson.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest'
+
+          - task: BPAES.bp-aws.bp-aws-auth.awsTokenBroker@1
+            displayName: 'Login to AWS'
+            inputs:
+              serviceConnection: ${{ parameters.AWS_SERVICE_CONNECTION }}
+              roleName: ${{ parameters.AWS_ROLE_NAME }}
+              region: ${{ parameters.AWS_REGION }}
+
+          - bash: |
+              set -e
+              terraform init -backend-config="environments/dev/dev.tfvars"
+              terraform apply "$(System.ArtifactsDirectory)/terraform-plan/tfplan"
+            displayName: 'Terraform Apply'
+
+  - stage: Deploy_Spring_Boot
+    displayName: 'Deployment'
+    dependsOn: Terraform_Infrastructure
+    jobs:
+      - job: Deploy
+        displayName: 'Deploy to Elastic Beanstalk'
+        pool:
+          name: GenericPoolLinux-ss
+        steps:
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download JAR'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - task: JasonBJohnson.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@0
+            displayName: 'Install Terraform for Outputs'
+            inputs:
+              terraformVersion: 'latest'
+
+          - task: BPAES.bp-aws.bp-aws-auth.awsTokenBroker@1
+            displayName: 'Login to AWS for Deployment'
+            inputs:
+              serviceConnection: ${{ parameters.AWS_SERVICE_CONNECTION }}
+              roleName: ${{ parameters.AWS_ROLE_NAME }}
+              region: ${{ parameters.AWS_REGION }}
+
+          - bash: |
+              # Extract EB details from Terraform
+              terraform init -backend-config="environments/dev/dev.tfvars"
+              echo "##vso[task.setvariable variable=EB_APP_NAME]$(terraform output -raw eb_app_name)"
+              echo "##vso[task.setvariable variable=EB_ENV_NAME]$(terraform output -raw eb_env_name)"
+            displayName: 'Get EB Details from Terraform'
+
+          - task: BeanstalkDeploy@1
+            displayName: 'Deploy to Elastic Beanstalk'
+            inputs:
+              awsServiceConnection: ${{ parameters.AWS_SERVICE_CONNECTION }}
+              regionName: ${{ parameters.AWS_REGION }}
+              applicationName: '$(EB_APP_NAME)'
+              environmentName: '$(EB_ENV_NAME)'
+              deploymentBundle: '$(System.ArtifactsDirectory)/drop/*.jar'
+              versionLabel: 'v$(Build.BuildId)'
