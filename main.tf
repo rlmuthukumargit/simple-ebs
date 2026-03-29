@@ -1,11 +1,3 @@
-terraform {
-  backend "s3" {}
-}
-
-provider "aws" {
-  region = var.region
-}
-
 module "elastic_beanstalk" {
   source = "./modules/elastic-beanstalk"
 
