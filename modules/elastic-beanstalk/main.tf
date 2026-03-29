@@ -75,32 +75,23 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = "application"
   }
 
-  # --- HTTPS Listener (Port 443) --- only created when ssl_certificate_arn is set
-  dynamic "setting" {
-    for_each = var.ssl_certificate_arn != "" ? [1] : []
-    content {
-      namespace = "aws:elbv2:listener:443"
-      name      = "Protocol"
-      value     = "HTTPS"
-    }
+  # --- HTTPS Listener (Port 443) ---
+  setting {
+    namespace = "aws:elbv2:listener:443"
+    name      = "Protocol"
+    value     = "HTTPS"
   }
 
-  dynamic "setting" {
-    for_each = var.ssl_certificate_arn != "" ? [1] : []
-    content {
-      namespace = "aws:elbv2:listener:443"
-      name      = "SSLCertificateArns"
-      value     = var.ssl_certificate_arn
-    }
+  setting {
+    namespace = "aws:elbv2:listener:443"
+    name      = "SSLCertificateArns"
+    value     = var.ssl_certificate_arn
   }
 
-  dynamic "setting" {
-    for_each = var.ssl_certificate_arn != "" ? [1] : []
-    content {
-      namespace = "aws:elbv2:listener:443"
-      name      = "SSLPolicy"
-      value     = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-    }
+  setting {
+    namespace = "aws:elbv2:listener:443"
+    name      = "SSLPolicy"
+    value     = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   }
 
   # --- APP SETTINGS: Environment Variable ---
