@@ -46,4 +46,5 @@ variable "solution_stack_name" {
 variable "ssl_certificate_arn" {
   description = "Amazon Resource Name (ARN) of the SSL certificate"
   type        = string
+  default     = ""
 }
