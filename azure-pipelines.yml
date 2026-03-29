@@ -84,7 +84,7 @@ stages:
               region: ${{ parameters.AWS_REGION }}
 
           - bash: |
-              terraform init -backend-config="environments/dev/dev.tfvars"
+              terraform init -backend-config="environments/dev/dev.backend"
             displayName: 'Terraform Init'
 
           - bash: |
@@ -125,7 +125,7 @@ stages:
               region: ${{ parameters.AWS_REGION }}
 
           - bash: |
-              terraform init -backend-config="environments/dev/dev.tfvars"
+              terraform init -backend-config="environments/dev/dev.backend"
               echo "##vso[task.setvariable variable=EB_APP_NAME]$(terraform output -raw eb_app_name)"
               echo "##vso[task.setvariable variable=EB_ENV_NAME]$(terraform output -raw eb_env_name)"
             displayName: 'Get EB Details from Terraform'
