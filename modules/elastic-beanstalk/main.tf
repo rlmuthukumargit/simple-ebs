@@ -75,6 +75,25 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = "application"
   }
 
+  # --- UPDATES & DEPLOYMENTS ---
+  setting {
+    namespace = "aws:elasticbeanstalk:command"
+    name      = "DeploymentPolicy"
+    value     = "Immutable"
+  }
+
+  setting {
+    namespace = "aws:autoscaling:updatepolicy:rollingupdate"
+    name      = "RollingUpdateEnabled"
+    value     = "true"
+  }
+
+  setting {
+    namespace = "aws:autoscaling:updatepolicy:rollingupdate"
+    name      = "RollingUpdateType"
+    value     = "Immutable"
+  }
+
   # --- HTTPS Listener (Port 443) ---
   #setting {
   #  namespace = "aws:elbv2:listener:443"
@@ -97,6 +116,12 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   # --- APP SETTINGS: Environment Variable ---
   setting {
     namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "SERVER_PORT"
+    value     = "8080"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
     name      = "JAVA_OPTS"
     value     = "-Xmx512m"
   }
@@ -111,7 +136,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:elasticbeanstalk:environment:process:default"
     name      = "Port"
-    value     = "5000"
+    value     = "8080"
   }
 
   setting {
