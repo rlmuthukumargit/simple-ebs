@@ -1,3 +1,10 @@
+resources:
+  repositories:
+  - repository: tss_tax_engine
+    type: git
+    name: M_C_Americas_TravelCenters/tss_tax_engine # Matching your configuration
+    ref: refs/heads/Feature-PoC
+
 trigger: none
 
 pool:
@@ -23,33 +30,57 @@ stages:
         pool:
           name: GenericPoolLinux-ss
         steps:
+          - checkout: self
+          - checkout: tss_tax_engine
           - task: Maven@3
             displayName: 'Build JAR'
             inputs:
-              mavenPomFile: 'pom.xml'
-              goals: 'clean package'
-              publishJUnitResults: true
-              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              mavenPomFile: '$(Build.SourcesDirectory)/tss_tax_engine/pom.xml'
+              goals: 'clean package -DskipTests'
+              publishJUnitResults: false
               javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.25'
+              jdkVersionOption: '21'
               mavenVersionOption: 'Default'
               mavenAuthenticateFeed: false
               effectivePomSkip: false
               sonarQubeRunAnalysis: false
 
-          - task: CopyFiles@2
-            displayName: 'Copy JAR for Artifact'
+          - bash: |
+              mkdir -p $(Build.ArtifactStagingDirectory)/eb-bundle/.platform/nginx/conf.d/
+              # Copy files from the tss_tax_engine folder using full absolute paths
+              cp -r $(Build.SourcesDirectory)/tss_tax_engine/.platform $(Build.ArtifactStagingDirectory)/eb-bundle/
+              cp $(Build.SourcesDirectory)/tss_tax_engine/Procfile $(Build.ArtifactStagingDirectory)/eb-bundle/ || true
+              # Rename the JAR to application.jar so it matches the Procfile
+              cp $(Build.SourcesDirectory)/tss_tax_engine/target/*.jar $(Build.ArtifactStagingDirectory)/eb-bundle/application.jar
+            displayName: 'Prepare Elastic Beanstalk Bundle'
+
+          - task: ArchiveFiles@2
+            displayName: 'Create ZIP Deployment Bundle'
             inputs:
-              SourceFolder: '$(system.defaultworkingdirectory)/target'
-              Contents: '*.jar'
-              TargetFolder: '$(build.artifactstagingdirectory)'
+              rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/eb-bundle'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/deploy-bundle.zip'
+              replaceExistingArchive: true
 
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Artifact'
             inputs:
-              PathtoPublish: '$(build.artifactstagingdirectory)'
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/deploy-bundle.zip'
               ArtifactName: 'drop'
               publishLocation: 'Container'
+
+          - task: BPAES.bp-aws.bp-aws-auth.awsTokenBroker@1
+            displayName: 'Login to AWS to Archive'
+            inputs:
+              serviceConnection: ${{ parameters.AWS_SERVICE_CONNECTION }}
+              roleName: ${{ parameters.AWS_ROLE_NAME }}
+              region: ${{ parameters.AWS_REGION }}
+
+          - bash: |
+              echo "Uploading to S3 Bucket: elasticbeanstalk-us-east-2-infra"
+              aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://elasticbeanstalk-us-east-2-infra/app/deploy-v$(Build.BuildId).zip
+            displayName: 'Upload to S3 Archive'
 
   - stage: Terraform_Infrastructure
     displayName: 'Infrastructure'
@@ -88,54 +119,10 @@ stages:
             displayName: 'Terraform Init'
 
           - bash: |
-              terraform plan -var-file="environments/dev/dev.tfvars"
+              terraform plan -var-file="environments/dev/dev.tfvars" -var="s3_key=app/deploy-v$(Build.BuildId).zip"
             displayName: 'Terraform Plan'
 
           - bash: |
-              terraform apply -var-file="environments/dev/dev.tfvars" -auto-approve
+              terraform apply -var-file="environments/dev/dev.tfvars" -var="s3_key=app/deploy-v$(Build.BuildId).zip" -auto-approve
             displayName: 'Terraform Apply'
 
-  - stage: Deploy_Spring_Boot
-    displayName: 'Deployment'
-    dependsOn: Terraform_Infrastructure
-    jobs:
-      - job: Deploy
-        displayName: 'Deploy to Elastic Beanstalk'
-        pool:
-          name: GenericPoolLinux-ss
-        steps:
-          - task: DownloadBuildArtifacts@0
-            displayName: 'Download JAR'
-            inputs:
-              buildType: 'current'
-              downloadType: 'single'
-              artifactName: 'drop'
-              downloadPath: '$(System.ArtifactsDirectory)'
-
-          - task: JasonBJohnson.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@0
-            displayName: 'Install Terraform for Outputs'
-            inputs:
-              terraformVersion: 'latest'
-
-          - task: BPAES.bp-aws.bp-aws-auth.awsTokenBroker@1
-            displayName: 'Login to AWS for Deployment'
-            inputs:
-              serviceConnection: ${{ parameters.AWS_SERVICE_CONNECTION }}
-              roleName: ${{ parameters.AWS_ROLE_NAME }}
-              region: ${{ parameters.AWS_REGION }}
-
-          - bash: |
-              terraform init -backend-config="environments/dev/dev.backend"
-              echo "##vso[task.setvariable variable=EB_APP_NAME]$(terraform output -raw eb_app_name)"
-              echo "##vso[task.setvariable variable=EB_ENV_NAME]$(terraform output -raw eb_env_name)"
-            displayName: 'Get EB Details from Terraform'
-
-          - task: BeanstalkDeploy@1
-            displayName: 'Deploy to Elastic Beanstalk'
-            inputs:
-              awsServiceConnection: ${{ parameters.AWS_SERVICE_CONNECTION }}
-              regionName: ${{ parameters.AWS_REGION }}
-              applicationName: '$(EB_APP_NAME)'
-              environmentName: '$(EB_ENV_NAME)'
-              deploymentBundle: '$(System.ArtifactsDirectory)/drop/*.jar'
-              versionLabel: 'v$(Build.BuildId)'

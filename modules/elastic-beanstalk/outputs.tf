@@ -12,3 +12,8 @@ output "eb_env_name" {
   description = "Elastic Beanstalk Environment Name"
   value       = aws_elastic_beanstalk_environment.eb_env.name
 }
+
+output "s3_bucket" {
+  description = "The S3 bucket used for deployments"
+  value       = var.s3_bucket
+}

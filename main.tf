@@ -11,4 +11,15 @@ module "elastic_beanstalk" {
   tier                 = var.tier
   solution_stack_name  = var.solution_stack_name
   ssl_certificate_arn  = var.ssl_certificate_arn
+  
+  # S3 Source
+  s3_bucket            = var.s3_bucket
+  s3_key               = var.s3_key
+}
+
+module "monitoring" {
+  source             = "./modules/monitoring"
+  app_name           = var.app_name
+  env_name           = var.env_name
+  notification_email = var.notification_email
 }

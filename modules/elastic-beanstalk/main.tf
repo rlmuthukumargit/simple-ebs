@@ -1,8 +1,7 @@
-# --- DATA: Get Default VPC Security Group ---
-data "aws_security_group" "default_vpc_sg" {
-  vpc_id = var.vpc_id
-  name   = "default"
-}
+# --- DATA: Get VPC Details ---
+#data "aws_vpc" "selected" {
+#  id = var.vpc_id
+#}
 
 # --- Elastic Beanstalk Application ---
 resource "aws_elastic_beanstalk_application" "eb_app" {
@@ -16,6 +15,15 @@ resource "aws_elastic_beanstalk_application" "eb_app" {
   }
 }
 
+# --- Elastic Beanstalk Application Version (S3 Source) ---
+resource "aws_elastic_beanstalk_application_version" "eb_version" {
+  name        = "${var.app_name}-v-${formatdate("YYYYMMDDhhmmss", timestamp())}"
+  application = aws_elastic_beanstalk_application.eb_app.name
+  description = "Application version for ${var.app_name} from S3 bucket ${var.s3_bucket}"
+  bucket      = var.s3_bucket
+  key         = var.s3_key
+}
+
 # --- Elastic Beanstalk Environment ---
 resource "aws_elastic_beanstalk_environment" "eb_env" {
   name                = var.env_name
@@ -23,18 +31,13 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   solution_stack_name = var.solution_stack_name
   tier                = var.tier
   cname_prefix        = var.env_name
+  version_label       = aws_elastic_beanstalk_application_version.eb_version.name
 
   # --- MANDATORY: IAM ---
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "IamInstanceProfile"
     value     = var.iam_instance_profile
-  }
-
-  setting {
-    namespace = "aws:autoscaling:launchconfiguration"
-    name      = "SecurityGroups"
-    value     = data.aws_security_group.default_vpc_sg.id
   }
 
   setting {
@@ -75,23 +78,24 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     value     = "application"
   }
 
-  # --- UPDATES & DEPLOYMENTS ---
+  # --- UPDATES & DEPLOYMENTS (Un-wedge mode) ---
   setting {
     namespace = "aws:elasticbeanstalk:command"
     name      = "DeploymentPolicy"
-    value     = "Immutable"
+    value     = "AllAtOnce"
   }
 
   setting {
     namespace = "aws:autoscaling:updatepolicy:rollingupdate"
     name      = "RollingUpdateEnabled"
-    value     = "true"
+    value     = "false"
   }
 
+  # --- MANDATORY: Instance Configuration ---
   setting {
-    namespace = "aws:autoscaling:updatepolicy:rollingupdate"
-    name      = "RollingUpdateType"
-    value     = "Immutable"
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "InstanceType"
+    value     = var.instance_type
   }
 
   # --- HTTPS Listener (Port 443) ---
@@ -122,15 +126,23 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
 
   setting {
     namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "PORT"
+    value     = "8080"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
     name      = "JAVA_OPTS"
     value     = "-Xmx512m"
   }
 
-  setting {
-    namespace = "aws:autoscaling:launchconfiguration"
-    name      = "InstanceType"
-    value     = var.instance_type
-  }
+  # --- PHASE 1: COMMENT THIS OUT ---
+  # Run terraform apply once. After it succeeds, uncomment this for Phase 2.
+  # setting {
+  #   namespace = "aws:autoscaling:launchconfiguration"
+  #   name      = "InstanceType"
+  #   value     = var.instance_type
+  # }
 
   # --- PROCESS SETTINGS: Port and Health Check ---
   setting {
@@ -148,16 +160,22 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:elasticbeanstalk:environment:process:default"
     name      = "HealthCheckPath"
-    value     = "/"
+    value     = "/actuator/health"
   }
+
+
 
   depends_on = [
     aws_elastic_beanstalk_application.eb_app
   ]
 
+  tags = {
+    Name        = var.app_name
+    Environment = var.app_name
+  }
+
   lifecycle {
     ignore_changes = [
-      tags,
       tags_all
     ]
   }
