@@ -14,25 +14,6 @@ variable "env_name" {
   type        = string
 }
 
-variable "iam_instance_profile" {
-  description = "Existing IAM instance profile name"
-  type        = string
-}
-
-variable "service_role" {
-  description = "Existing IAM service role ARN"
-  type        = string
-}
-
-variable "vpc_id" {
-  description = "Existing VPC ID"
-  type        = string
-}
-
-variable "subnets" {
-  description = "List of subnets"
-  type        = list(string)
-}
 
 variable "instance_type" {
   description = "EC2 instance type(s)"

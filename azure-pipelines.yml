@@ -5,7 +5,13 @@ resources:
     name: M_C_Americas_TravelCenters/tss_tax_engine # Matching your configuration
     ref: refs/heads/Feature-PoC
 
-trigger: none
+# Defines a timestamped BuildNumber format: e.g., 20260403-124530-123
+name: $(Date:yyyyMMdd-HHmmss)-$(Build.BuildId)
+
+trigger:
+  branches:
+    include:
+      - Feature-PoC
 
 pool:
   name: GenericPoolLinux-ss
@@ -78,8 +84,8 @@ stages:
               region: ${{ parameters.AWS_REGION }}
 
           - bash: |
-              echo "Uploading to S3 Bucket: elasticbeanstalk-us-east-2-infra"
-              aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://elasticbeanstalk-us-east-2-infra/app/deploy-v$(Build.BuildId).zip
+              echo "Uploading to S3 Bucket: ws-038u-salestax-iac-us-east-2"
+              aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://ws-038u-salestax-iac-us-east-2/app/deploy-v$(Build.BuildNumber).zip
             displayName: 'Upload to S3 Archive'
 
   - stage: Terraform_Infrastructure
@@ -119,10 +125,10 @@ stages:
             displayName: 'Terraform Init'
 
           - bash: |
-              terraform plan -var-file="environments/dev/dev.tfvars" -var="s3_key=app/deploy-v$(Build.BuildId).zip"
+              terraform plan -var-file="environments/dev/dev.tfvars" -var="s3_key=app/deploy-v$(Build.BuildNumber).zip"
             displayName: 'Terraform Plan'
 
           - bash: |
-              terraform apply -var-file="environments/dev/dev.tfvars" -var="s3_key=app/deploy-v$(Build.BuildId).zip" -auto-approve
+              terraform apply -var-file="environments/dev/dev.tfvars" -var="s3_key=app/deploy-v$(Build.BuildNumber).zip" -auto-approve
             displayName: 'Terraform Apply'
 

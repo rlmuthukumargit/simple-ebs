@@ -1,4 +1,4 @@
-bucket  = "elasticbeanstalk-us-east-2-infra"
+bucket  = "ws-038u-salestax-iac-us-east-2"
 key     = "tss-salestax-d2/terraform.tfstate"
-region  = "us-east-1"
+region  = "us-east-2"
 encrypt = true

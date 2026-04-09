@@ -1,7 +1,34 @@
-# --- DATA: Get VPC Details ---
-#data "aws_vpc" "selected" {
-#  id = var.vpc_id
-#}
+# --- DATA: Get Custom VPC & Subnets ---
+data "aws_vpc" "custom" {
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+}
+
+data "aws_subnets" "custom" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.custom.id]
+  }
+  # Optionally, you can add filters here if you only want private or public subnets
+}
+
+# --- DATA: Get Default IAM Roles ---
+data "aws_iam_instance_profile" "eb_ec2_role" {
+  name = "aws-elasticbeanstalk-ec2-role"
+}
+
+data "aws_iam_role" "eb_service_role" {
+  name = "aws-elasticbeanstalk-service-role"
+}
+
+locals {
+  vpc_id               = data.aws_vpc.custom.id
+  subnets              = data.aws_subnets.custom.ids
+  iam_instance_profile = data.aws_iam_instance_profile.eb_ec2_role.name
+  service_role         = data.aws_iam_role.eb_service_role.arn
+}
 
 # --- Elastic Beanstalk Application ---
 resource "aws_elastic_beanstalk_application" "eb_app" {
@@ -9,7 +36,7 @@ resource "aws_elastic_beanstalk_application" "eb_app" {
   description = "Elastic Beanstalk Application for ${var.app_name}"
 
   appversion_lifecycle {
-    service_role          = var.service_role
+    service_role          = local.service_role
     max_count             = 100
     delete_source_from_s3 = true
   }
@@ -37,32 +64,32 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "IamInstanceProfile"
-    value     = var.iam_instance_profile
+    value     = local.iam_instance_profile
   }
 
   setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "ServiceRole"
-    value     = var.service_role
+    value     = local.service_role
   }
 
   # --- MANDATORY: VPC / Network ---
   setting {
     namespace = "aws:ec2:vpc"
     name      = "VPCId"
-    value     = var.vpc_id
+    value     = local.vpc_id
   }
 
   setting {
     namespace = "aws:ec2:vpc"
     name      = "Subnets"
-    value     = join(",", var.subnets)
+    value     = join(",", local.subnets)
   }
 
   setting {
     namespace = "aws:ec2:vpc"
     name      = "ELBSubnets"
-    value     = join(",", var.subnets)
+    value     = join(",", local.subnets)
   }
 
   setting {
@@ -161,6 +188,36 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     namespace = "aws:elasticbeanstalk:environment:process:default"
     name      = "HealthCheckPath"
     value     = "/actuator/health"
+  }
+
+  # Health Streaming
+  setting {
+    namespace = "aws:elasticbeanstalk:cloudwatch:logs:health"
+    name      = "HealthStreamingEnabled"
+    value     = "true"
+  }
+
+  # --- ENHANCED HEALTH & CLOUDWATCH METRICS ---
+  setting {
+    namespace = "aws:elasticbeanstalk:healthreporting:system"
+    name      = "SystemType"
+    value     = "enhanced"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:healthreporting:system"
+    name      = "ConfigDocument"
+    value     = jsonencode({
+      CloudWatchMetrics = {
+        Environment = [
+          "Requests",
+          "Latency",
+          "ApplicationRequests5xx",
+          "ApplicationRequests4xx",
+          "InstanceHealth"
+        ]
+      }
+    })
   }
 
 
