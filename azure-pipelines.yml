@@ -141,7 +141,7 @@ stages:
                 S3_KEY=$LATEST_KEY
               fi
 
-              terraform plan -var-file="environments/dev/dev.tfvars" -var="s3_key=$S3_KEY"
+              terraform plan -var-file="environments/dev/dev.tfvars" -var="s3_key=$S3_KEY" -var="db_username=$(DB_USERNAME)" -var="db_password=$(DB_PASSWORD)"
             displayName: 'Terraform Plan'
 
           - bash: |
@@ -155,6 +155,6 @@ stages:
                 S3_KEY=$LATEST_KEY
               fi
 
-              terraform apply -var-file="environments/dev/dev.tfvars" -var="s3_key=$S3_KEY" -auto-approve
+              terraform apply -var-file="environments/dev/dev.tfvars" -var="s3_key=$S3_KEY" -var="db_username=$(DB_USERNAME)" -var="db_password=$(DB_PASSWORD)" -auto-approve
             displayName: 'Terraform Apply'
 
