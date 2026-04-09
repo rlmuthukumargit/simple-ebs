@@ -85,7 +85,10 @@ stages:
 
           - bash: |
               echo "Uploading to S3 Bucket: ws-038u-salestax-iac-us-east-2"
+              # Upload versioned file
               aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://ws-038u-salestax-iac-us-east-2/app/deploy-v$(Build.BuildNumber).zip
+              # Upload latest.zip fallback
+              aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://ws-038u-salestax-iac-us-east-2/app/latest.zip
             displayName: 'Upload to S3 Archive'
 
   - stage: Terraform_Infrastructure
@@ -125,10 +128,33 @@ stages:
             displayName: 'Terraform Init'
 
           - bash: |
-              terraform plan -var-file="environments/dev/dev.tfvars" -var="s3_key=app/deploy-v$(Build.BuildNumber).zip"
+              BUCKET="ws-038u-salestax-iac-us-east-2"
+              VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
+              LATEST_KEY="app/latest.zip"
+
+              # Check if the versioned file exists. If not, fallback to latest.zip
+              if aws s3 ls "s3://$BUCKET/$VERSIONED_KEY"; then
+                echo "Using versioned artifact: $VERSIONED_KEY"
+                S3_KEY=$VERSIONED_KEY
+              else
+                echo "Versioned artifact not found. Falling back to: $LATEST_KEY"
+                S3_KEY=$LATEST_KEY
+              fi
+
+              terraform plan -var-file="environments/dev/dev.tfvars" -var="s3_key=$S3_KEY"
             displayName: 'Terraform Plan'
 
           - bash: |
-              terraform apply -var-file="environments/dev/dev.tfvars" -var="s3_key=app/deploy-v$(Build.BuildNumber).zip" -auto-approve
+              BUCKET="ws-038u-salestax-iac-us-east-2"
+              VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
+              LATEST_KEY="app/latest.zip"
+
+              if aws s3 ls "s3://$BUCKET/$VERSIONED_KEY"; then
+                S3_KEY=$VERSIONED_KEY
+              else
+                S3_KEY=$LATEST_KEY
+              fi
+
+              terraform apply -var-file="environments/dev/dev.tfvars" -var="s3_key=$S3_KEY" -auto-approve
             displayName: 'Terraform Apply'
 
