@@ -217,6 +217,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
           "InstanceHealth"
         ]
       }
+      Version = 1
     })
   }
 
