@@ -86,7 +86,7 @@ stages:
 
           - bash: |
               # Extract bucket from dev.tfvars
-              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              BUCKET=$(grep "s3_bucket" $(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
               if [ -z "$BUCKET" ]; then
                 BUCKET="elasticbeanstalk-us-east-2-infra"
               fi
@@ -136,7 +136,7 @@ stages:
 
           - bash: |
               # Extract bucket from dev.tfvars
-              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              BUCKET=$(grep "s3_bucket" $(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
               if [ -z "$BUCKET" ]; then BUCKET="elasticbeanstalk-us-east-2-infra"; fi
               
               VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
@@ -155,14 +155,14 @@ stages:
                 S3_KEY=$DEFAULT_KEY
               fi
 
-              terraform plan -var-file="environments/dev/dev.tfvars" \
+              terraform plan -var-file="$(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars" \
                 -var="s3_bucket=$BUCKET" \
                 -var="s3_key=$S3_KEY"
             displayName: 'Terraform Plan'
 
           - bash: |
               # Re-extract for safety in separate bash step
-              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              BUCKET=$(grep "s3_bucket" $(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
               if [ -z "$BUCKET" ]; then BUCKET="elasticbeanstalk-us-east-2-infra"; fi
               
               VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
@@ -177,7 +177,7 @@ stages:
                 S3_KEY=$DEFAULT_KEY
               fi
 
-              terraform apply -var-file="environments/dev/dev.tfvars" \
+              terraform apply -var-file="$(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars" \
                 -var="s3_bucket=$BUCKET" \
                 -var="s3_key=$S3_KEY" \
                 -auto-approve
