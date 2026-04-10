@@ -13,6 +13,7 @@ resource "aws_sns_topic_subscription" "email" {
 
 data "aws_iam_policy_document" "sns_topic_policy" {
   statement {
+    sid     = "AllowCloudWatchAlarms"
     actions = ["sns:Publish"]
     effect  = "Allow"
     principals {
@@ -20,7 +21,6 @@ data "aws_iam_policy_document" "sns_topic_policy" {
       identifiers = ["cloudwatch.amazonaws.com"]
     }
     resources = [aws_sns_topic.alerts.arn]
-    sid       = "AllowCloudWatchEvents"
   }
 }
 
@@ -43,6 +43,13 @@ data "aws_autoscaling_groups" "eb_asg" {
 
 # Fetch ALB created by EB
 data "aws_lb" "eb_alb" {
+  tags = {
+    "elasticbeanstalk:environment-name" = var.env_name
+  }
+}
+
+# Fetch Target Group created by EB
+data "aws_lb_target_group" "eb_tg" {
   tags = {
     "elasticbeanstalk:environment-name" = var.env_name
   }
@@ -106,6 +113,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
 
   dimensions = {
     LoadBalancer = data.aws_lb.eb_alb.arn_suffix
+    TargetGroup  = data.aws_lb_target_group.eb_tg.arn_suffix
   }
 }
 
@@ -125,5 +133,6 @@ resource "aws_cloudwatch_metric_alarm" "latency" {
 
   dimensions = {
     LoadBalancer = data.aws_lb.eb_alb.arn_suffix
+    TargetGroup  = data.aws_lb_target_group.eb_tg.arn_suffix
   }
 }
