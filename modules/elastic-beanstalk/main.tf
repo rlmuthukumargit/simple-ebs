@@ -230,7 +230,8 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
 
   tags = {
     Name        = var.app_name
-    Environment = var.app_name
+    Application = var.app_name
+    EnvName     = var.env_name
   }
 
   lifecycle {

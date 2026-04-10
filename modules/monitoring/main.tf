@@ -3,6 +3,10 @@
 ############################################
 resource "aws_sns_topic" "alerts" {
   name = "${var.app_name}-alerts"
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
+  }
 }
 
 resource "aws_sns_topic_subscription" "email" {
@@ -53,6 +57,11 @@ resource "aws_cloudwatch_metric_alarm" "eb_health" {
   dimensions = {
     EnvironmentName = var.env_name
   }
+
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
+  }
 }
 
 # 2. CPU Utilization
@@ -71,6 +80,11 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
 
   dimensions = {
     EnvironmentName = var.env_name
+  }
+
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
   }
 }
 
@@ -91,6 +105,11 @@ resource "aws_cloudwatch_metric_alarm" "eb_5xx" {
   dimensions = {
     EnvironmentName = var.env_name
   }
+
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
+  }
 }
 
 # 4. Latency Alarm (Service Level)
@@ -109,5 +128,10 @@ resource "aws_cloudwatch_metric_alarm" "eb_latency" {
 
   dimensions = {
     EnvironmentName = var.env_name
+  }
+
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
   }
 }
