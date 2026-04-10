@@ -41,7 +41,7 @@ stages:
           - task: Maven@3
             displayName: 'Build JAR'
             inputs:
-              mavenPomFile: '$(Build.SourcesDirectory)/tss_tax_engine/pom.xml'
+              mavenPomFile: '$(Build.SourcesDirectory)/demo-app-actuator/pom.xml'
               goals: 'clean package -DskipTests'
               publishJUnitResults: false
               javaHomeOption: 'JDKVersion'
@@ -53,11 +53,12 @@ stages:
 
           - bash: |
               mkdir -p $(Build.ArtifactStagingDirectory)/eb-bundle/.platform/nginx/conf.d/
-              # Copy files from the tss_tax_engine folder using full absolute paths
-              cp -r $(Build.SourcesDirectory)/tss_tax_engine/.platform $(Build.ArtifactStagingDirectory)/eb-bundle/
-              cp $(Build.SourcesDirectory)/tss_tax_engine/Procfile $(Build.ArtifactStagingDirectory)/eb-bundle/ || true
-              # Rename the JAR to application.jar so it matches the Procfile
-              cp $(Build.SourcesDirectory)/tss_tax_engine/target/*.jar $(Build.ArtifactStagingDirectory)/eb-bundle/application.jar
+              # Copy files from the demo-app-actuator folder
+              cp -r $(Build.SourcesDirectory)/demo-app-actuator/.platform $(Build.ArtifactStagingDirectory)/eb-bundle/
+              cp $(Build.SourcesDirectory)/demo-app-actuator/Procfile $(Build.ArtifactStagingDirectory)/eb-bundle/ || true
+              # Rename the JAR to application.jar
+              cp $(Build.SourcesDirectory)/demo-app-actuator/target/*.jar $(Build.ArtifactStagingDirectory)/eb-bundle/application.jar
+            displayName: 'Prepare Elastic Beanstalk Bundle'
             displayName: 'Prepare Elastic Beanstalk Bundle'
 
           - task: ArchiveFiles@2
@@ -84,11 +85,17 @@ stages:
               region: ${{ parameters.AWS_REGION }}
 
           - bash: |
-              echo "Uploading to S3 Bucket: ws-038u-salestax-iac-us-east-2"
+              # Extract bucket from dev.tfvars
+              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              if [ -z "$BUCKET" ]; then
+                BUCKET="elasticbeanstalk-us-east-2-infra"
+              fi
+              echo "Uploading to extracted S3 Bucket: $BUCKET"
               # Upload versioned file
-              aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://ws-038u-salestax-iac-us-east-2/app/deploy-v$(Build.BuildNumber).zip
+              aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://$BUCKET/app/deploy-v$(Build.BuildNumber).zip
               # Upload latest.zip fallback
-              aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://ws-038u-salestax-iac-us-east-2/app/latest.zip
+              aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://$BUCKET/app/latest.zip
+            displayName: 'Upload to S3 Archive'
             displayName: 'Upload to S3 Archive'
 
   - stage: Terraform_Infrastructure
@@ -128,33 +135,52 @@ stages:
             displayName: 'Terraform Init'
 
           - bash: |
-              BUCKET="ws-038u-salestax-iac-us-east-2"
+              # Extract bucket from dev.tfvars
+              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              if [ -z "$BUCKET" ]; then BUCKET="elasticbeanstalk-us-east-2-infra"; fi
+              
               VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
               LATEST_KEY="app/latest.zip"
+              DEFAULT_KEY="app/application.zip"
 
-              # Check if the versioned file exists. If not, fallback to latest.zip
-              if aws s3 ls "s3://$BUCKET/$VERSIONED_KEY"; then
-                echo "Using versioned artifact: $VERSIONED_KEY"
+              # Triple Fallback Logic
+              if aws s3 ls "s3://$BUCKET/$VERSIONED_KEY" > /dev/null 2>&1; then
+                echo "Found fresh versioned artifact: $VERSIONED_KEY"
                 S3_KEY=$VERSIONED_KEY
-              else
-                echo "Versioned artifact not found. Falling back to: $LATEST_KEY"
+              elif aws s3 ls "s3://$BUCKET/$LATEST_KEY" > /dev/null 2>&1; then
+                echo "Fresh version not found. Falling back to LATEST: $LATEST_KEY"
                 S3_KEY=$LATEST_KEY
+              else
+                echo "No build artifacts found. Using stable default: $DEFAULT_KEY"
+                S3_KEY=$DEFAULT_KEY
               fi
 
-              terraform plan -var-file="environments/dev/dev.tfvars" -var="s3_key=$S3_KEY"
+              terraform plan -var-file="environments/dev/dev.tfvars" \
+                -var="s3_bucket=$BUCKET" \
+                -var="s3_key=$S3_KEY"
             displayName: 'Terraform Plan'
 
           - bash: |
-              BUCKET="ws-038u-salestax-iac-us-east-2"
+              # Re-extract for safety in separate bash step
+              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              if [ -z "$BUCKET" ]; then BUCKET="elasticbeanstalk-us-east-2-infra"; fi
+              
               VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
               LATEST_KEY="app/latest.zip"
+              DEFAULT_KEY="app/application.zip"
 
-              if aws s3 ls "s3://$BUCKET/$VERSIONED_KEY"; then
+              if aws s3 ls "s3://$BUCKET/$VERSIONED_KEY" > /dev/null 2>&1; then
                 S3_KEY=$VERSIONED_KEY
-              else
+              elif aws s3 ls "s3://$BUCKET/$LATEST_KEY" > /dev/null 2>&1; then
                 S3_KEY=$LATEST_KEY
+              else
+                S3_KEY=$DEFAULT_KEY
               fi
 
-              terraform apply -var-file="environments/dev/dev.tfvars" -var="s3_key=$S3_KEY" -auto-approve
+              terraform apply -var-file="environments/dev/dev.tfvars" \
+                -var="s3_bucket=$BUCKET" \
+                -var="s3_key=$S3_KEY" \
+                -auto-approve
+            displayName: 'Terraform Apply'
             displayName: 'Terraform Apply'
 
