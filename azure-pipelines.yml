@@ -60,7 +60,6 @@ stages:
               # Rename the JAR to application.jar
               cp $(Build.SourcesDirectory)/demo-app-actuator/target/*.jar $(Build.ArtifactStagingDirectory)/eb-bundle/application.jar
             displayName: 'Prepare Elastic Beanstalk Bundle'
-            displayName: 'Prepare Elastic Beanstalk Bundle'
 
           - task: ArchiveFiles@2
             displayName: 'Create ZIP Deployment Bundle'
@@ -96,7 +95,6 @@ stages:
               aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://$BUCKET/app/deploy-v$(Build.BuildNumber).zip
               # Upload latest.zip fallback
               aws s3 cp $(Build.ArtifactStagingDirectory)/deploy-bundle.zip s3://$BUCKET/app/latest.zip
-            displayName: 'Upload to S3 Archive'
             displayName: 'Upload to S3 Archive'
 
   - stage: Terraform_Infrastructure
@@ -183,6 +181,5 @@ stages:
                 -var="s3_bucket=$BUCKET" \
                 -var="s3_key=$S3_KEY" \
                 -auto-approve
-            displayName: 'Terraform Apply'
             displayName: 'Terraform Apply'
 
