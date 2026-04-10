@@ -54,43 +54,55 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
+  namespace           = "AWS/ElasticBeanstalk"
   period              = "300"
   statistic           = "Average"
   threshold           = "80"
   alarm_description   = "Alarm if average CPU utilization exceeds 80%"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    EnvironmentName = var.env_name
+  }
 }
 
-# 3. ALB 5xx Errors Alarm
+# 3. Application 5xx Errors Alarm
 resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
-  alarm_name          = "${var.app_name}-alb-5xx-errors"
+  alarm_name          = "${var.app_name}-app-5xx-errors"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
-  metric_name         = "HTTPCode_Target_5XX_Count"
-  namespace           = "AWS/ApplicationELB"
+  metric_name         = "ApplicationRequests5xx"
+  namespace           = "AWS/ElasticBeanstalk"
   period              = "60"
   statistic           = "Sum"
   threshold           = "10"
-  alarm_description   = "Alarm if ALB 5xx errors exceed 10 in 1 minute"
+  alarm_description   = "Alarm if Application 5xx errors exceed 10 in 1 minute"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    EnvironmentName = var.env_name
+  }
 }
 
-# 4. Latency Alarm (Target Response Time)
+# 4. Latency Alarm (Average Response Time)
 resource "aws_cloudwatch_metric_alarm" "latency" {
   alarm_name          = "${var.app_name}-high-latency"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
-  metric_name         = "TargetResponseTime"
-  namespace           = "AWS/ApplicationELB"
+  metric_name         = "Duration"
+  namespace           = "AWS/ElasticBeanstalk"
   period              = "60"
   statistic           = "Average"
-  threshold           = "1" # 1 second
+  threshold           = "1000" # 1000ms (1 second)
   alarm_description   = "Alarm if application latency exceeds 1 second"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    EnvironmentName = var.env_name
+  }
 }
 
 # --- CloudWatch Dashboard ---
