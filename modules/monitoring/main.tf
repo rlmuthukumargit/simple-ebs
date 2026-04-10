@@ -30,28 +30,13 @@ resource "aws_sns_topic_policy" "default" {
 }
 
 ############################################
-# --- DATA SOURCES (STABLE LOOKUP) ---
+# --- CloudWatch Alarms (ULTIMATE STABILITY) ---
 ############################################
+# All alarms now use the 'EnvironmentName' dimension.
+# This ensures that dashboards and alerts NEVER break, even if 
+# AWS recreates Instances, ASGs, or Load Balancers during updates.
 
-# Fetch ALB created by EB (for traffic-level alarms)
-data "aws_lb" "eb_alb" {
-  tags = {
-    "elasticbeanstalk:environment-name" = var.env_name
-  }
-}
-
-# Fetch Target Group created by EB (for latency/5xx alarms)
-data "aws_lb_target_group" "eb_tg" {
-  tags = {
-    "elasticbeanstalk:environment-name" = var.env_name
-  }
-}
-
-############################################
-# --- CloudWatch Alarms (STABLE DIMENSIONS) ---
-############################################
-
-# 1. Environment Health Alarm (Stable - Environment Name)
+# 1. Environment Health Alarm
 resource "aws_cloudwatch_metric_alarm" "eb_health" {
   alarm_name          = "${var.app_name}-eb-health"
   comparison_operator = "GreaterThanThreshold"
@@ -70,8 +55,7 @@ resource "aws_cloudwatch_metric_alarm" "eb_health" {
   }
 }
 
-# 2. CPU Utilization (Stable - NOW USING ENVIRONMENT NAME)
-# This replaces the ASG-level metric, which can change during deployments.
+# 2. CPU Utilization
 resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
   alarm_name          = "${var.app_name}-high-cpu"
   comparison_operator = "GreaterThanThreshold"
@@ -90,42 +74,40 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
   }
 }
 
-# 3. Application 5xx Errors (Stable - LoadBalancer & TargetGroup)
-resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
+# 3. Application 5xx Errors (Service Level)
+resource "aws_cloudwatch_metric_alarm" "eb_5xx" {
   alarm_name          = "${var.app_name}-app-5xx-errors"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
-  metric_name         = "HTTPCode_Target_5XX_Count"
-  namespace           = "AWS/ApplicationELB"
+  metric_name         = "ApplicationRequests5xx"
+  namespace           = "AWS/ElasticBeanstalk"
   period              = 60
   statistic           = "Sum"
   threshold           = 10
-  alarm_description   = "Alarm if ALB 5xx errors exceed 10 in 1 minute"
+  alarm_description   = "Alarm if environment 5xx errors exceed 10 in 1 minute"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    LoadBalancer = data.aws_lb.eb_alb.arn_suffix
-    TargetGroup  = data.aws_lb_target_group.eb_tg.arn_suffix
+    EnvironmentName = var.env_name
   }
 }
 
-# 4. Latency Alarm (Stable - LoadBalancer & TargetGroup)
-resource "aws_cloudwatch_metric_alarm" "latency" {
+# 4. Latency Alarm (Service Level)
+resource "aws_cloudwatch_metric_alarm" "eb_latency" {
   alarm_name          = "${var.app_name}-high-latency"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
-  metric_name         = "TargetResponseTime"
-  namespace           = "AWS/ApplicationELB"
+  metric_name         = "Duration"
+  namespace           = "AWS/ElasticBeanstalk"
   period              = 60
   statistic           = "Average"
   threshold           = 1
-  alarm_description   = "Alarm if application latency exceeds 1 second"
+  alarm_description   = "Alarm if average environment response duration exceeds 1 second"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    LoadBalancer = data.aws_lb.eb_alb.arn_suffix
-    TargetGroup  = data.aws_lb_target_group.eb_tg.arn_suffix
+    EnvironmentName = var.env_name
   }
 }
