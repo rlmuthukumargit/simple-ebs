@@ -42,7 +42,7 @@ stages:
           - task: Maven@3
             displayName: 'Build JAR'
             inputs:
-              mavenPomFile: '$(Build.SourcesDirectory)/demo-app-actuator/pom.xml'
+              mavenPomFile: '$(Build.SourcesDirectory)/tss_tax_engine/pom.xml'
               goals: 'clean package -DskipTests'
               publishJUnitResults: false
               javaHomeOption: 'JDKVersion'
@@ -54,11 +54,11 @@ stages:
 
           - bash: |
               mkdir -p $(Build.ArtifactStagingDirectory)/eb-bundle/.platform/nginx/conf.d/
-              # Copy files from the demo-app-actuator folder
-              cp -r $(Build.SourcesDirectory)/demo-app-actuator/.platform $(Build.ArtifactStagingDirectory)/eb-bundle/
-              cp $(Build.SourcesDirectory)/demo-app-actuator/Procfile $(Build.ArtifactStagingDirectory)/eb-bundle/ || true
+              # Copy files from the tss_tax_engine folder
+              cp -r $(Build.SourcesDirectory)/tss_tax_engine/.platform $(Build.ArtifactStagingDirectory)/eb-bundle/
+              cp $(Build.SourcesDirectory)/tss_tax_engine/Procfile $(Build.ArtifactStagingDirectory)/eb-bundle/ || true
               # Rename the JAR to application.jar
-              cp $(Build.SourcesDirectory)/demo-app-actuator/target/*.jar $(Build.ArtifactStagingDirectory)/eb-bundle/application.jar
+              cp $(Build.SourcesDirectory)/tss_tax_engine/target/*.jar $(Build.ArtifactStagingDirectory)/eb-bundle/application.jar
             displayName: 'Prepare Elastic Beanstalk Bundle'
 
           - task: ArchiveFiles@2
