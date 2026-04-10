@@ -37,6 +37,7 @@ stages:
           name: GenericPoolLinux-ss
         steps:
           - checkout: self
+            path: '.'
           - checkout: tss_tax_engine
           - task: Maven@3
             displayName: 'Build JAR'
@@ -86,9 +87,9 @@ stages:
 
           - bash: |
               # Extract bucket from dev.tfvars
-              BUCKET=$(grep "s3_bucket" $(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
               if [ -z "$BUCKET" ]; then
-                BUCKET="elasticbeanstalk-us-east-2-infra"
+                BUCKET="ws-038u-salestax-iac-us-east-2"
               fi
               echo "Uploading to extracted S3 Bucket: $BUCKET"
               # Upload versioned file
@@ -108,6 +109,7 @@ stages:
           name: GenericPoolLinux-ss
         steps:
           - checkout: self
+            path: '.'
 
           - task: JasonBJohnson.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@0
             displayName: 'Install Terraform'
@@ -136,8 +138,8 @@ stages:
 
           - bash: |
               # Extract bucket from dev.tfvars
-              BUCKET=$(grep "s3_bucket" $(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
-              if [ -z "$BUCKET" ]; then BUCKET="elasticbeanstalk-us-east-2-infra"; fi
+              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              if [ -z "$BUCKET" ]; then BUCKET="ws-038u-salestax-iac-us-east-2"; fi
               
               VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
               LATEST_KEY="app/latest.zip"
@@ -155,15 +157,15 @@ stages:
                 S3_KEY=$DEFAULT_KEY
               fi
 
-              terraform plan -var-file="$(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars" \
+              terraform plan -var-file="environments/dev/dev.tfvars" \
                 -var="s3_bucket=$BUCKET" \
                 -var="s3_key=$S3_KEY"
             displayName: 'Terraform Plan'
 
           - bash: |
               # Re-extract for safety in separate bash step
-              BUCKET=$(grep "s3_bucket" $(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
-              if [ -z "$BUCKET" ]; then BUCKET="elasticbeanstalk-us-east-2-infra"; fi
+              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              if [ -z "$BUCKET" ]; then BUCKET="ws-038u-salestax-iac-us-east-2"; fi
               
               VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
               LATEST_KEY="app/latest.zip"
@@ -177,7 +179,7 @@ stages:
                 S3_KEY=$DEFAULT_KEY
               fi
 
-              terraform apply -var-file="$(System.DefaultWorkingDirectory)/environments/dev/dev.tfvars" \
+              terraform apply -var-file="environments/dev/dev.tfvars" \
                 -var="s3_bucket=$BUCKET" \
                 -var="s3_key=$S3_KEY" \
                 -auto-approve
