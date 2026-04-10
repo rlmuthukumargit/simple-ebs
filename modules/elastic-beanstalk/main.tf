@@ -211,7 +211,7 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
       CloudWatchMetrics = {
         Environment = [
           "Requests",
-          "Latency",
+          "Duration",
           "ApplicationRequests5xx",
           "ApplicationRequests4xx",
           "InstanceHealth"
