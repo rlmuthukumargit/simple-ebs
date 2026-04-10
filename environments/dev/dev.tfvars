@@ -5,7 +5,7 @@ instance_type        = "t3a.medium"
 #ssl_certificate_arn  = "arn:aws:acm:us-east-1:xxxxxxxx:certificate/xxxx-xxxx-xxxx"
 
 # --- S3 Source ---
-s3_bucket            = "elasticbeanstalk-us-east-2-infra"
+s3_bucket            = "ws-038u-salestax-iac-us-east-2"
 s3_key               = "app/application.zip" 
 
 # --- Monitoring ---
