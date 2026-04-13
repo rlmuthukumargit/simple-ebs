@@ -140,15 +140,40 @@ resource "aws_cloudwatch_metric_alarm" "eb_latency" {
 # --- CloudWatch LOG-BASED MONITORING ---
 # Metric Filters + Alarms for EB logs
 ############################################
-# EB native log streaming creates log groups at:
-#   /aws/elasticbeanstalk/<env_name>/environment/eb-engine.log
-#   /aws/elasticbeanstalk/<env_name>/environment/web.stdout.log
-#   /aws/elasticbeanstalk/<env_name>/environment/nginx/error.log
+
+# Pre-create log groups so metric filters never fail.
+# EB StreamLogs will adopt these existing groups automatically.
+resource "aws_cloudwatch_log_group" "web_stdout" {
+  name              = "/aws/elasticbeanstalk/${var.env_name}/environment/web.stdout.log"
+  retention_in_days = 30
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
+  }
+}
+
+resource "aws_cloudwatch_log_group" "eb_engine" {
+  name              = "/aws/elasticbeanstalk/${var.env_name}/environment/eb-engine.log"
+  retention_in_days = 30
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
+  }
+}
+
+resource "aws_cloudwatch_log_group" "nginx_error" {
+  name              = "/aws/elasticbeanstalk/${var.env_name}/environment/nginx/error.log"
+  retention_in_days = 30
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
+  }
+}
 
 # --- 5. Application Errors (web.stdout.log) ---
 resource "aws_cloudwatch_log_metric_filter" "app_errors" {
   name           = "${var.app_name}-app-error-filter"
-  log_group_name = "/aws/elasticbeanstalk/${var.env_name}/environment/web.stdout.log"
+  log_group_name = aws_cloudwatch_log_group.web_stdout.name
   pattern        = "?ERROR ?Exception ?\"error\" ?\"FATAL\" ?\"ORA-\""
 
   metric_transformation {
@@ -182,7 +207,7 @@ resource "aws_cloudwatch_metric_alarm" "app_errors" {
 # --- 6. EB Engine Errors (eb-engine.log) ---
 resource "aws_cloudwatch_log_metric_filter" "eb_engine_errors" {
   name           = "${var.app_name}-eb-engine-error-filter"
-  log_group_name = "/aws/elasticbeanstalk/${var.env_name}/environment/eb-engine.log"
+  log_group_name = aws_cloudwatch_log_group.eb_engine.name
   pattern        = "?ERROR ?\"error\" ?\"Failed\" ?\"failed\""
 
   metric_transformation {
@@ -216,7 +241,7 @@ resource "aws_cloudwatch_metric_alarm" "eb_engine_errors" {
 # --- 7. Nginx Errors (nginx/error.log) ---
 resource "aws_cloudwatch_log_metric_filter" "nginx_errors" {
   name           = "${var.app_name}-nginx-error-filter"
-  log_group_name = "/aws/elasticbeanstalk/${var.env_name}/environment/nginx/error.log"
+  log_group_name = aws_cloudwatch_log_group.nginx_error.name
   pattern        = "?error ?crit ?alert ?emerg"
 
   metric_transformation {
