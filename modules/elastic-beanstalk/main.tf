@@ -147,6 +147,12 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
   # --- APP SETTINGS: Environment Variable ---
   setting {
     namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "SPRING_PROFILES_ACTIVE"
+    value     = "dev"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
     name      = "SERVER_PORT"
     value     = "8080"
   }
@@ -195,6 +201,25 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
     namespace = "aws:elasticbeanstalk:cloudwatch:logs:health"
     name      = "HealthStreamingEnabled"
     value     = "true"
+  }
+
+  # --- INSTANCE LOG STREAMING TO CLOUDWATCH ---
+  setting {
+    namespace = "aws:elasticbeanstalk:cloudwatch:logs"
+    name      = "StreamLogs"
+    value     = "true"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:cloudwatch:logs"
+    name      = "DeleteOnTerminate"
+    value     = "false"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:cloudwatch:logs"
+    name      = "RetentionInDays"
+    value     = "30"
   }
 
   # --- ENHANCED HEALTH & CLOUDWATCH METRICS ---

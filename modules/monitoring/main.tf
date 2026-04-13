@@ -135,3 +135,114 @@ resource "aws_cloudwatch_metric_alarm" "eb_latency" {
     EnvName     = var.env_name
   }
 }
+
+############################################
+# --- CloudWatch LOG-BASED MONITORING ---
+# Metric Filters + Alarms for EB logs
+############################################
+# EB native log streaming creates log groups at:
+#   /aws/elasticbeanstalk/<env_name>/environment/eb-engine.log
+#   /aws/elasticbeanstalk/<env_name>/environment/web.stdout.log
+#   /aws/elasticbeanstalk/<env_name>/environment/nginx/error.log
+
+# --- 5. Application Errors (web.stdout.log) ---
+resource "aws_cloudwatch_log_metric_filter" "app_errors" {
+  name           = "${var.app_name}-app-error-filter"
+  log_group_name = "/aws/elasticbeanstalk/${var.env_name}/environment/web.stdout.log"
+  pattern        = "?ERROR ?Exception ?\"error\" ?\"FATAL\" ?\"ORA-\""
+
+  metric_transformation {
+    name          = "${var.app_name}-AppErrorCount"
+    namespace     = "Custom/${var.app_name}"
+    value         = "1"
+    default_value = "0"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "app_errors" {
+  alarm_name          = "${var.app_name}-app-log-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "${var.app_name}-AppErrorCount"
+  namespace           = "Custom/${var.app_name}"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 5
+  alarm_description   = "Alarm if application logs contain more than 5 errors in 5 minutes (web.stdout.log)"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
+  }
+}
+
+# --- 6. EB Engine Errors (eb-engine.log) ---
+resource "aws_cloudwatch_log_metric_filter" "eb_engine_errors" {
+  name           = "${var.app_name}-eb-engine-error-filter"
+  log_group_name = "/aws/elasticbeanstalk/${var.env_name}/environment/eb-engine.log"
+  pattern        = "?ERROR ?\"error\" ?\"Failed\" ?\"failed\""
+
+  metric_transformation {
+    name          = "${var.app_name}-EBEngineErrorCount"
+    namespace     = "Custom/${var.app_name}"
+    value         = "1"
+    default_value = "0"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "eb_engine_errors" {
+  alarm_name          = "${var.app_name}-eb-engine-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "${var.app_name}-EBEngineErrorCount"
+  namespace           = "Custom/${var.app_name}"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 3
+  alarm_description   = "Alarm if EB engine logs contain more than 3 errors in 5 minutes (eb-engine.log)"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
+  }
+}
+
+# --- 7. Nginx Errors (nginx/error.log) ---
+resource "aws_cloudwatch_log_metric_filter" "nginx_errors" {
+  name           = "${var.app_name}-nginx-error-filter"
+  log_group_name = "/aws/elasticbeanstalk/${var.env_name}/environment/nginx/error.log"
+  pattern        = "?error ?crit ?alert ?emerg"
+
+  metric_transformation {
+    name          = "${var.app_name}-NginxErrorCount"
+    namespace     = "Custom/${var.app_name}"
+    value         = "1"
+    default_value = "0"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "nginx_errors" {
+  alarm_name          = "${var.app_name}-nginx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "${var.app_name}-NginxErrorCount"
+  namespace           = "Custom/${var.app_name}"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 10
+  alarm_description   = "Alarm if Nginx error logs exceed 10 entries in 5 minutes"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  tags = {
+    Application = var.app_name
+    EnvName     = var.env_name
+  }
+}

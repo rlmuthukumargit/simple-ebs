@@ -56,6 +56,7 @@ stages:
               mkdir -p $(Build.ArtifactStagingDirectory)/eb-bundle/.platform/nginx/conf.d/
               # Copy files from the tss_tax_engine folder
               cp -r $(Build.SourcesDirectory)/tss_tax_engine/.platform $(Build.ArtifactStagingDirectory)/eb-bundle/
+              cp -r $(Build.SourcesDirectory)/tss_tax_engine/.ebextensions $(Build.ArtifactStagingDirectory)/eb-bundle/ || true
               cp $(Build.SourcesDirectory)/tss_tax_engine/Procfile $(Build.ArtifactStagingDirectory)/eb-bundle/ || true
               # Rename the JAR to application.jar
               cp $(Build.SourcesDirectory)/tss_tax_engine/target/*.jar $(Build.ArtifactStagingDirectory)/eb-bundle/application.jar
