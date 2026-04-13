@@ -239,8 +239,21 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
           "Duration",
           "ApplicationRequests5xx",
           "ApplicationRequests4xx",
+          "ApplicationRequests2xx",
+          "ApplicationRequests3xx",
           "InstanceHealth",
           "CPUUtilization"
+        ]
+        Instance = [
+          "CPUUtilization",
+          "InstanceHealth",
+          "ApplicationRequests5xx",
+          "ApplicationRequests4xx",
+          "ApplicationRequests2xx",
+          "ApplicationRequests3xx",
+          "ApplicationRequestsTotal",
+          "RootFilesystemUtil",
+          "LoadAverage1min"
         ]
       }
       Version = 1
