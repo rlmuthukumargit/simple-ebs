@@ -239,13 +239,12 @@ resource "aws_elastic_beanstalk_environment" "eb_env" {
           ApplicationRequestsTotal = 60
           ApplicationRequests5xx   = 60
           ApplicationRequests4xx   = 60
-          Duration                 = 60
-          CPUUtilization           = 60
+          ApplicationLatencyP95    = 60
           InstancesSevere          = 60
           InstancesDegraded        = 60
         }
         Instance = {
-          CPUUtilization     = 60
+          CPUUser            = 60
           RootFilesystemUtil = 60
           InstanceHealth     = 60
           LoadAverage1min    = 60

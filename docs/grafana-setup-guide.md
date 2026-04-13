@@ -10,15 +10,7 @@ Complete step-by-step instructions to configure a Grafana dashboard with **appli
 
 - [Part A: Application Logs Panel](#part-a-application-logs-panel)
 - [Part B: CloudWatch Metric Panels](#part-b-cloudwatch-metric-panels)
-  - [Panel 1: Environment Health](#panel-1-environment-health)
-  - [Panel 2: CPU Utilization](#panel-2-cpu-utilization)
-  - [Panel 3: Application 5xx Errors](#panel-3-application-5xx-errors)
-  - [Panel 4: Response Latency](#panel-4-response-latency)
-  - [Panel 5: Application Log Errors](#panel-5-application-log-errors-custom-metric)
-  - [Panel 6: EB Engine Errors](#panel-6-eb-engine-errors-custom-metric)
-  - [Panel 7: Nginx Errors](#panel-7-nginx-errors-custom-metric)
-- [Part C: Recommended Dashboard Layout](#part-c-recommended-dashboard-layout)
-- [Part D: Troubleshooting](#part-d-troubleshooting)
+- [Part C: Troubleshooting](#part-d-troubleshooting)
 
 ---
 
@@ -106,12 +98,12 @@ For each panel below:
 
 ---
 
-### Panel 2: CPU Utilization
+### Panel 2: CPU Usage (User)
 
 | Field | Value |
 |---|---|
 | **Namespace** | `AWS/ElasticBeanstalk` |
-| **Metric Name** | `CPUUtilization` |
+| **Metric Name** | `CPUUser` |
 | **Statistic** | `Average` |
 | **Period** | `5 minutes` |
 | **Dimensions** | `EnvironmentName` = `<env-name>` |
@@ -147,12 +139,12 @@ For each panel below:
 
 ---
 
-### Panel 4: Response Latency (Duration)
+### Panel 4: Response Latency (P95)
 
 | Field | Value |
 |---|---|
 | **Namespace** | `AWS/ElasticBeanstalk` |
-| **Metric Name** | `Duration` |
+| **Metric Name** | `ApplicationLatencyP95` |
 | **Statistic** | `Average` |
 | **Period** | `1 minute` |
 | **Dimensions** | `EnvironmentName` = `<env-name>` |
@@ -160,7 +152,7 @@ For each panel below:
 | Panel Setting | Value |
 |---|---|
 | **Visualization** | `Time Series` |
-| **Title** | `⏱️ Avg Response Latency` |
+| **Title** | `⏱️ P95 Response Latency` |
 | **Unit** | `seconds (s)` |
 | **Thresholds** | Green: 0-0.5, Yellow: 0.5-1, Red: 1+ |
 
@@ -315,9 +307,9 @@ Wait 5 minutes, then check CloudWatch.
 | # | Panel | Namespace | Metric | Stat | Period | Dimension |
 |---|---|---|---|---|---|---|
 | 1 | Env Health | `AWS/ElasticBeanstalk` | `EnvironmentHealth` | Max | 1m | `EnvironmentName` |
-| 2 | CPU | `AWS/ElasticBeanstalk` | `CPUUtilization` | Avg | 5m | `EnvironmentName` |
+| 2 | CPU | `AWS/ElasticBeanstalk` | `CPUUser` | Avg | 5m | `EnvironmentName` |
 | 3 | 5xx | `AWS/ElasticBeanstalk` | `ApplicationRequests5xx` | Sum | 1m | `EnvironmentName` |
-| 4 | Latency | `AWS/ElasticBeanstalk` | `Duration` | Avg | 1m | `EnvironmentName` |
+| 4 | Latency | `AWS/ElasticBeanstalk` | `ApplicationLatencyP95` | Avg | 1m | `EnvironmentName` |
 | 5 | App Errors | `Custom/<app-name>` | `<app-name>-AppErrorCount` | Sum | 5m | none |
 | 6 | EB Engine | `Custom/<app-name>` | `<app-name>-EBEngineErrorCount` | Sum | 5m | none |
 | 7 | Nginx | `Custom/<app-name>` | `<app-name>-NginxErrorCount` | Sum | 5m | none |
