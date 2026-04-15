@@ -54,6 +54,7 @@ resource "aws_cloudwatch_metric_alarm" "eb_health" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
 
+  treat_missing_data  = "notBreaching"
   dimensions = {
     EnvironmentName = var.env_name
   }
@@ -78,6 +79,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
 
+  treat_missing_data  = "notBreaching"
   dimensions = {
     EnvironmentName = var.env_name
   }
@@ -102,6 +104,7 @@ resource "aws_cloudwatch_metric_alarm" "eb_5xx" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
 
+  treat_missing_data  = "notBreaching"
   dimensions = {
     EnvironmentName = var.env_name
   }
@@ -117,14 +120,15 @@ resource "aws_cloudwatch_metric_alarm" "eb_latency" {
   alarm_name          = "${var.app_name}-high-latency"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
-  metric_name         = "Duration"
+  metric_name         = "ApplicationLatencyP95"
   namespace           = "AWS/ElasticBeanstalk"
   period              = 60
   statistic           = "Average"
   threshold           = 1
-  alarm_description   = "Alarm if average environment response duration exceeds 1 second"
+  alarm_description   = "Alarm if 95th percentile environment response duration exceeds 1 second"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
+  treat_missing_data  = "notBreaching"
 
   dimensions = {
     EnvironmentName = var.env_name

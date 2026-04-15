@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Specification - Simple Terraform Learning</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --bg: #ffffff;
+            --card-bg: #f8fafc;
+            --text: #334155;
+            --border: #e2e8f0;
+            --code-bg: #f1f5f9;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0 !important; }
+            .content-wrapper { box-shadow: none !important; border: none !important; max-width: 100% !important; margin: 0 !important; }
+            h2 { page-break-before: always; }
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text);
+            line-height: 1.5;
+            margin: 0;
+            padding: 40px;
+            background: #f1f5f9;
+        }
+
+        .content-wrapper {
+            max-width: 950px;
+            margin: 0 auto;
+            background: var(--bg);
+            padding: 50px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        header {
+            border-bottom: 3px solid var(--primary);
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { margin: 0; font-size: 2rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
+        h2 { font-size: 1.25rem; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 30px; text-transform: uppercase; }
+
+        .spec-item {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            border-bottom: 1px solid var(--border);
+            padding: 15px 0;
+        }
+
+        .spec-label {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .spec-value {
+            font-size: 0.95rem;
+        }
+
+        .resource-tag {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--accent);
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .requirement-box {
+            background: #fdf2f2;
+            border-left: 4px solid #ef4444;
+            padding: 10px 15px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .why-box {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 10px 15px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .btn-print {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; color: #e11d48; }
+    </style>
+</head>
+<body>
+
+<div class="content-wrapper">
+    <header>
+        <h1>Resource Specification</h1>
+        <div class="no-print">
+            <button onclick="window.print()" class="btn-print">Save as PDF</button>
+        </div>
+    </header>
+
+    <div class="desc">
+        Project: <strong>Simple Terraform Learning</strong> | Reference: AWS Beanstalk + CloudWatch Modular Stack
+    </div>
+
+    <section>
+        <h2>01. Compute Platform (Elastic Beanstalk)</h2>
+        
+        <div class="resource-tag">aws_elastic_beanstalk_application</div>
+        <div class="spec-item">
+            <div class="spec-label">Internal Requirement</div>
+            <div class="spec-value">Service-level lifecycle management. Specifically set to <span class="code">max_count = 100</span> to prevent S3 version sprawl.</div>
+        </div>
+        <div class="spec-item">
+            <div class="spec-label">Technical Why</div>
+            <div class="spec-value">Provides a unified namespace for multi-environment (Dev/QA) deployment consistency.</div>
+        </div>
+
+        <div class="resource-tag">aws_elastic_beanstalk_environment</div>
+        <div class="spec-item">
+            <div class="spec-label">Network Isolation</div>
+            <div class="spec-value">Requirement: <span class="code">ELBScheme = "internal"</span>. This prevents exposure to public subnets and forces all traffic through corporate entry points.</div>
+        </div>
+        <div class="spec-item">
+            <div class="spec-label">Deployment Strategy</div>
+            <div class="spec-value">Configured as <span class="code">AllAtOnce</span> for the Dev tier to allow rapid "Un-wedge" recovery during failure-prone CI/CD testing phases.</div>
+        </div>
+        <div class="spec-item">
+            <div class="spec-label">Health Mechanism</div>
+            <div class="spec-value">Targets <span class="code">/actuator/health</span>. Required to validate application context readiness (Hibernate/Oracle pool) before ALB traffic registration.</div>
+        </div>
+        <div class="spec-item">
+            <div class="spec-label">Resource Management</div>
+            <div class="spec-value">Force-set <span class="code">JAVA_OPTS=-Xmx512m</span> to ensure JVM stability on lower-tier <span class="code">t3a.medium</span> instances.</div>
+        </div>
+    </section>
+
+    <section>
+        <h2>02. Observability & Telemetry</h2>
+
+        <div class="resource-tag">aws_cloudwatch_log_group</div>
+        <div class="spec-item">
+            <div class="spec-label">Data Retention</div>
+            <div class="spec-value">Why created: To bypass Beanstalk's default log destruction. Pre-allocation ensures <span class="code">30-day</span> persistence for audit compliance.</div>
+        </div>
+
+        <div class="resource-tag">aws_cloudwatch_log_metric_filter</div>
+        <div class="spec-item">
+            <div class="spec-label">Pattern Logic</div>
+            <div class="spec-value">Specifically implements <span class="code">ORA-</span> pattern matching. Required to detect silent database connectivity failures that don't trigger HTTP 5xx codes.</div>
+        </div>
+
+        <div class="resource-tag">aws_cloudwatch_metric_alarm</div>
+        <div class="spec-item">
+            <div class="spec-label">Dimension Logic</div>
+            <div class="spec-value">
+                Target: <span class="code">EnvironmentName</span>. 
+                <div class="why-box">
+                    <strong>Critical Requirement:</strong> Metrics in CloudWatch are identified by their dimensions. Without the <code>EnvironmentName</code> dimension, the alarm cannot uniquely identify which environment instance is reporting data.
+                </div>
+                <div class="requirement-box">
+                    <strong>Stability Factor:</strong> Using this dimension abstracts the alarm from the underlying EC2 Instance IDs or ASG names, which change during scale-out or deployment events.
+                </div>
+            </div>
+        </div>
+        <div class="spec-item">
+            <div class="spec-label">Latency SLA</div>
+            <div class="spec-value">Requirement: 95th Percentile (<span class="code">ApplicationLatencyP95</span>) monitoring. Essential for detecting performance degradation before service-wide timeouts occur.</div>
+        </div>
+    </section>
+
+    <section>
+        <h2>03. Identity & Permissions</h2>
+        <div class="resource-tag">aws_iam_policy_document (SNS)</div>
+        <div class="spec-item">
+            <div class="spec-label">Security Requirement</div>
+            <div class="spec-value">Explicitly grants <span class="code">sns:Publish</span> to <span class="code">cloudwatch.amazonaws.com</span>. Without this scoped policy, Alarms fail to reach the email notification layer.</div>
+        </div>
+    </section>
+
+    <div style="margin-top: 50px; font-size: 0.8rem; color: #94a3b8; border-top: 1px solid var(--border); padding-top: 10px;">
+        TS-REF: EB-CW-MODULAR-V1 | Generated internally for infrastructure audit 2026.
+    </div>
+</div>
+
+</body>
+</html>

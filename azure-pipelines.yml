@@ -2,21 +2,31 @@ resources:
   repositories:
   - repository: tss_tax_engine
     type: git
-    name: M_C_Americas_TravelCenters/tss_tax_engine # Matching your configuration
-    ref: refs/heads/Feature-PoC
+    name: M_C_Americas_TravelCenters/tss_tax_engine
+    ref: refs/heads/develop
+    trigger:
+      branches:
+        include:
+          - develop
 
 # Defines a timestamped BuildNumber format: e.g., 20260403-124530-123
 name: $(Date:yyyyMMdd-HHmmss)-$(Build.BuildId)
 
-trigger:
-  branches:
-    include:
-      - Feature-PoC
+trigger: none
+pr: none
 
 pool:
   name: GenericPoolLinux-ss
 
 parameters:
+  - name: ENVIRONMENT
+    displayName: 'Target Environment'
+    type: string
+    default: 'dev'
+    values:
+      - dev
+      - qa
+      - prod
   - name: AWS_SERVICE_CONNECTION
     type: string
     default: 'ws-038-testing'
@@ -86,8 +96,8 @@ stages:
               region: ${{ parameters.AWS_REGION }}
 
           - bash: |
-              # Extract bucket from dev.tfvars
-              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              # Extract bucket from env tfvars
+              BUCKET=$(grep "s3_bucket" environments/${{ parameters.ENVIRONMENT }}/${{ parameters.ENVIRONMENT }}.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
               if [ -z "$BUCKET" ]; then
                 BUCKET="ws-038u-salestax-iac-us-east-2"
               fi
@@ -132,12 +142,12 @@ stages:
               region: ${{ parameters.AWS_REGION }}
 
           - bash: |
-              terraform init -backend-config="environments/dev/dev.backend"
+              terraform init -backend-config="environments/${{ parameters.ENVIRONMENT }}/${{ parameters.ENVIRONMENT }}.backend"
             displayName: 'Terraform Init'
 
           - bash: |
-              # Extract bucket from dev.tfvars
-              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              # Extract bucket from env tfvars
+              BUCKET=$(grep "s3_bucket" environments/${{ parameters.ENVIRONMENT }}/${{ parameters.ENVIRONMENT }}.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
               if [ -z "$BUCKET" ]; then BUCKET="ws-038u-salestax-iac-us-east-2"; fi
               
               VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
@@ -156,14 +166,14 @@ stages:
                 S3_KEY=$DEFAULT_KEY
               fi
 
-              terraform plan -var-file="environments/dev/dev.tfvars" \
+              terraform plan -var-file="environments/${{ parameters.ENVIRONMENT }}/${{ parameters.ENVIRONMENT }}.tfvars" \
                 -var="s3_bucket=$BUCKET" \
                 -var="s3_key=$S3_KEY"
             displayName: 'Terraform Plan'
 
           - bash: |
               # Re-extract for safety in separate bash step
-              BUCKET=$(grep "s3_bucket" environments/dev/dev.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
+              BUCKET=$(grep "s3_bucket" environments/${{ parameters.ENVIRONMENT }}/${{ parameters.ENVIRONMENT }}.tfvars | awk -F'=' '{print $2}' | tr -d ' "' | xargs)
               if [ -z "$BUCKET" ]; then BUCKET="ws-038u-salestax-iac-us-east-2"; fi
               
               VERSIONED_KEY="app/deploy-v$(Build.BuildNumber).zip"
@@ -178,7 +188,7 @@ stages:
                 S3_KEY=$DEFAULT_KEY
               fi
 
-              terraform apply -var-file="environments/dev/dev.tfvars" \
+              terraform apply -var-file="environments/${{ parameters.ENVIRONMENT }}/${{ parameters.ENVIRONMENT }}.tfvars" \
                 -var="s3_bucket=$BUCKET" \
                 -var="s3_key=$S3_KEY" \
                 -auto-approve
